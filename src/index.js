@@ -101,7 +101,8 @@ class YoutubeApiClient {
             title: snippet.title,
             image: snippet.thumbnails.medium.url,
             author: snippet.channelTitle,
-            url: `https://www.youtube.com/watch?v=${id.videoId}`
+            url: `https://www.youtube.com/watch?v=${id.videoId}`,
+            type: 'video'
         }
     }
 
@@ -110,7 +111,8 @@ class YoutubeApiClient {
             views: parseInt(item.items[0].statistics.viewCount),
             likes: parseInt(item.items[0].statistics.likeCount),
             dislikes: parseInt(item.items[0].statistics.dislikeCount),
-            comments: parseInt(item.items[0].statistics.commentCount)
+            comments: parseInt(item.items[0].statistics.commentCount),
+            type: 'video'
         }
     }
 }

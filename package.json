@@ -1,6 +1,6 @@
 {
   "name": "youtube-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An api client used to search youtube using an App Key",
   "main": "index.js",
   "scripts": {
