@@ -6,6 +6,7 @@ class YoutubeApiClient {
         this.base_url = 'https://www.googleapis.com/youtube/v3'
         this.search_url = this.base_url + '/search'
         this.video_url = this.base_url + '/videos'
+        this.channel_url = this.base_url + '/channels'
         this.search_params = {
             part: 'snippet',
             type: 'video',
@@ -17,6 +18,9 @@ class YoutubeApiClient {
         this.video_params = {
             part: 'statistics',
             key: this.api_key
+        }
+        this.channel_params = {
+            part: 'snippet,statistics'
         }
     }
     
@@ -43,7 +47,6 @@ class YoutubeApiClient {
     }
 
     async getVideo(id) {
-
         const requestOptions = {
             qs: {
                 ...this.video_params,
@@ -93,6 +96,27 @@ class YoutubeApiClient {
         }
     }
 
+    async getChannel(username) {
+        const requestOptions = {
+            qs: {
+                ...this.channel_params,
+                forUsername: username,
+                key: this.api_key
+            },
+            method: 'GET',
+            uri: 'https://www.googleapis.com/youtube/v3/channels',
+            transform: body => {
+                return this.transformChannelItem(JSON.parse(body).items[0]);
+            }
+        }
+
+        try {
+            return await rp(requestOptions)
+        } catch (err) {
+            throw new Error(err)
+        }
+    }
+
     transformSearchItem(item) {
         const { id, snippet } = item;
 
@@ -113,6 +137,20 @@ class YoutubeApiClient {
             dislikes: parseInt(item.items[0].statistics.dislikeCount),
             comments: parseInt(item.items[0].statistics.commentCount),
             type: 'video'
+        }
+    }
+
+    transformChannelItem(channel) {
+        return {
+            id: channel.id,
+            description: channel.snippet.description,
+            title: channel.snippet.title,
+            followers: channel.statistics.subscriberCount,
+            posts: channel.statistics.videoCount,
+            handle: channel.snippet.title,
+            name: channel.snippet.title,
+            following: null,
+            image: channel.snippet.thumbnails.default.url
         }
     }
 }
