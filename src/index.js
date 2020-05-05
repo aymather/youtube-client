@@ -17,11 +17,11 @@ class YoutubeApiClient {
             key: this.api_key
         }
         this.video_params = {
-            part: 'statistics',
+            part: 'snippet,statistics',
             key: this.api_key
         }
         this.channel_params = {
-            part: 'snippet,statistics'
+            part: 'snippet,statistics,contentDetails'
         }
         this.videos_params = {
             part: 'contentDetails',
@@ -71,30 +71,30 @@ class YoutubeApiClient {
         }
     }
 
+    async getVideos(ids) {
+        try {
+            return await Promise.all(ids.map(id => {
+                return this.getVideo(id)
+                    .then(data => {
+                        return {
+                            ...data,
+                            id
+                        }
+                    })
+                    .catch(err => console.log(err))
+            }))
+        } catch (err) {
+            throw new Error(err);
+        }
+    }
+
     async searchVerbose(query, options) {
         try {
 
-            const items = await this.search(query, options);
+            const ids = await this.search(query, options);
 
             // Loop through each item and get its metadata
-            return await Promise.all(items.map(item => {
-                    return this.getVideo(item.id)
-                        .then(data => {
-                            return {
-                                ...data,
-                                ...item
-                            }
-                        })
-                        .catch(err => {
-                            console.log(err);
-                        })
-                }))
-                .then(data => {
-                    return data;
-                })
-                .catch(err => {
-                    console.log(err);
-                })
+            return await this.getVideos(ids);
 
         } catch (err) {
             throw new Error(err);
@@ -126,6 +126,7 @@ class YoutubeApiClient {
         const requestOptions = {
             qs: {
                 ...this.videos_params,
+                key: this.api_key,
                 forUsername: username,
                 playlistId: id
             },
@@ -135,7 +136,7 @@ class YoutubeApiClient {
                 return this.transformChannelVideoListItems(JSON.parse(body).items)
             }
         }
-
+        
         try {
             return await rp(requestOptions)
         } catch (err) {
@@ -146,26 +147,21 @@ class YoutubeApiClient {
     async getChannelVerbose(username) {
         try {
             var channel_info = await this.getChannel(username);
-            var videos_ids = await this.getChannelVideosList(username, channel_info.videos_id);
+            var video_ids = await this.getChannelVideosList(username, channel_info.videos_id);
 
-            console.log(channel_info);
-            // console.log(videos_ids);
+            const videos = await this.getVideos(video_ids);
+
+            return {
+                user: channel_info,
+                posts: videos
+            };
         } catch (err) {
             throw new Error(err)
         }
     }
 
     transformSearchItem(item) {
-        const { id, snippet } = item;
-
-        return {
-            id: id.videoId,
-            title: snippet.title,
-            image: snippet.thumbnails.medium.url,
-            author: snippet.channelTitle,
-            url: `https://www.youtube.com/watch?v=${id.videoId}`,
-            type: 'video'
-        }
+        return item.id.videoId
     }
 
     transformVideoItem(item) {
@@ -174,7 +170,11 @@ class YoutubeApiClient {
             likes: parseInt(item.items[0].statistics.likeCount),
             dislikes: parseInt(item.items[0].statistics.dislikeCount),
             comments: parseInt(item.items[0].statistics.commentCount),
-            type: 'video'
+            title: item.items[0].snippet.title,
+            image: item.items[0].snippet.thumbnails.medium.url,
+            url: `https://youtube.com/watch?v=${item.items[0].id}`,
+            type: 'video',
+            author: item.items[0].snippet.channelTitle
         }
     }
 
@@ -189,17 +189,16 @@ class YoutubeApiClient {
             name: channel.snippet.title,
             following: null,
             image: channel.snippet.thumbnails.default.url,
-            videos_id: channel.relatedPlaylists
+            videos_id: channel.contentDetails.relatedPlaylists.uploads
         }
     }
 
     transformChannelVideoListItems(videos) {
-        console.log(videos);
-        return []
-        // return videos.map(video => {
-        //     return video.contentDetails.videoId
-        // })
+        return videos.map(video => {
+            return video.contentDetails.videoId
+        })
     }
+
 }
 
 module.exports = YoutubeApiClient;
