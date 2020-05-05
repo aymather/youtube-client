@@ -7,6 +7,7 @@ class YoutubeApiClient {
         this.search_url = this.base_url + '/search'
         this.video_url = this.base_url + '/videos'
         this.channel_url = this.base_url + '/channels'
+        this.videos_url = this.base_url + '/playlistItems'
         this.search_params = {
             part: 'snippet',
             type: 'video',
@@ -21,6 +22,10 @@ class YoutubeApiClient {
         }
         this.channel_params = {
             part: 'snippet,statistics'
+        }
+        this.videos_params = {
+            part: 'contentDetails',
+            maxResults: 5
         }
     }
     
@@ -104,7 +109,7 @@ class YoutubeApiClient {
                 key: this.api_key
             },
             method: 'GET',
-            uri: 'https://www.googleapis.com/youtube/v3/channels',
+            uri: this.channel_url,
             transform: body => {
                 return this.transformChannelItem(JSON.parse(body).items[0]);
             }
@@ -112,6 +117,39 @@ class YoutubeApiClient {
 
         try {
             return await rp(requestOptions)
+        } catch (err) {
+            throw new Error(err)
+        }
+    }
+
+    async getChannelVideosList(username, id) {
+        const requestOptions = {
+            qs: {
+                ...this.videos_params,
+                forUsername: username,
+                playlistId: id
+            },
+            method: 'GET',
+            uri: this.videos_url,
+            transform: body => {
+                return this.transformChannelVideoListItems(JSON.parse(body).items)
+            }
+        }
+
+        try {
+            return await rp(requestOptions)
+        } catch (err) {
+            throw new Error(err)
+        }
+    }
+
+    async getChannelVerbose(username) {
+        try {
+            var channel_info = await this.getChannel(username);
+            var videos_ids = await this.getChannelVideosList(username, channel_info.videos_id);
+
+            console.log(channel_info);
+            // console.log(videos_ids);
         } catch (err) {
             throw new Error(err)
         }
@@ -150,8 +188,17 @@ class YoutubeApiClient {
             handle: channel.snippet.title,
             name: channel.snippet.title,
             following: null,
-            image: channel.snippet.thumbnails.default.url
+            image: channel.snippet.thumbnails.default.url,
+            videos_id: channel.relatedPlaylists
         }
+    }
+
+    transformChannelVideoListItems(videos) {
+        console.log(videos);
+        return []
+        // return videos.map(video => {
+        //     return video.contentDetails.videoId
+        // })
     }
 }
 
