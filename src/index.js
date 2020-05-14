@@ -118,7 +118,32 @@ class YoutubeApiClient {
         try {
             return await rp(requestOptions)
         } catch (err) {
-            throw new Error(err)
+            try {
+                return await this.getChannelById(username);
+            } catch (err) {
+                console.log('Doesn\'t exist');
+            }
+        }
+    }
+
+    async getChannelById(id) {
+        const requestOptions = {
+            qs: {
+                ...this.channel_params,
+                id: id,
+                key: this.api_key
+            },
+            method: 'GET',
+            uri: this.channel_url,
+            transform: body => {
+                return this.transformChannelItem(JSON.parse(body).items[0]);
+            }
+        }
+
+        try {
+            return await rp(requestOptions)
+        } catch (err) {
+            console.log('Doesn\'t exist.')
         }
     }
 
@@ -182,14 +207,14 @@ class YoutubeApiClient {
         return {
             id: channel.id,
             description: channel.snippet.description,
-            title: channel.snippet.title,
             followers: channel.statistics.subscriberCount,
             posts: channel.statistics.videoCount,
             handle: channel.snippet.title,
             name: channel.snippet.title,
             following: null,
             image: channel.snippet.thumbnails.default.url,
-            videos_id: channel.contentDetails.relatedPlaylists.uploads
+            videos_id: channel.contentDetails.relatedPlaylists.uploads,
+            url: `https://www.youtube.com/user/${channel.snippet.title}`
         }
     }
 
